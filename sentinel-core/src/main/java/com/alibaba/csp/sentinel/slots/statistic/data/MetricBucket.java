@@ -27,8 +27,14 @@ import com.alibaba.csp.sentinel.slots.statistic.base.LongAdder;
  */
 public class MetricBucket {
 
+    /**
+     * 存储各个时间的计数，比如异常总数、请求总数等。
+     */
     private final LongAdder[] counters;
 
+    /**
+     * 这段事件内的最小耗时
+     */
     private volatile long minRt;
 
     public MetricBucket() {

@@ -40,10 +40,16 @@ import com.alibaba.csp.sentinel.util.TimeUtil;
  */
 public abstract class LeapArray<T> {
 
+    //时间窗口的长度
     protected int windowLengthInMs;
+
+    //采样窗口的个数
     protected int sampleCount;
+
+    //以毫秒为单位的时间间隔
     protected int intervalInMs;
 
+    //采样的时间窗口数组
     protected final AtomicReferenceArray<WindowWrap<T>> array;
 
     /**
@@ -95,13 +101,40 @@ public abstract class LeapArray<T> {
      */
     protected abstract WindowWrap<T> resetWindowTo(WindowWrap<T> windowWrap, long startTime);
 
+
+    /**
+     * 计算索引，将时间戳映射到Bucket数组。
+     * @param timeMillis
+     * @return
+     */
     private int calculateTimeIdx(/*@Valid*/ long timeMillis) {
+        /**
+         * 假设当前时间戳为1577017699235
+         * windowLengthInMs为1000毫秒（1秒）
+         * 则
+         * 将毫秒转为秒 => 1577017699
+         * 映射到数组的索引为 => 19
+         */
         long timeId = timeMillis / windowLengthInMs;
         // Calculate current index so we can map the timestamp to the leap array.
+        //计算当前时间戳在Bucket中的位置
         return (int)(timeId % array.length());
     }
 
+
+    /**
+     * 获取bucket开始时间戳
+     *
+     * @param timeMillis
+     * @return
+     */
     protected long calculateWindowStart(/*@Valid*/ long timeMillis) {
+        /**
+         * 假设窗口大小为1000毫秒，即数组每个元素存储1秒钟的统计数据
+         * timeMillis % windowLengthInMs 就是取得毫秒部分
+         * timeMillis - 毫秒数 = 秒部分
+         * 这就得到每秒的开始时间戳
+         */
         return timeMillis - timeMillis % windowLengthInMs;
     }
 
@@ -116,8 +149,10 @@ public abstract class LeapArray<T> {
             return null;
         }
 
+        //计算当前时间戳在bucket中的位置
         int idx = calculateTimeIdx(timeMillis);
         // Calculate current bucket start time.
+        //获取每个bucket的开始时间
         long windowStart = calculateWindowStart(timeMillis);
 
         /*

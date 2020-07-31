@@ -71,6 +71,7 @@ public class DegradeRule extends AbstractRule {
     private double count;
 
     /**
+     * 发生降级时降级恢复超时（以秒为单位）
      * Degrade recover timeout (in seconds) when degradation occurs.
      */
     private int timeWindow;
@@ -81,6 +82,8 @@ public class DegradeRule extends AbstractRule {
     private int grade = RuleConstant.DEGRADE_GRADE_RT;
 
     /**
+     * 触发RT响应熔断出现的最小连续慢响应请求数量
+     * 默认值为5次
      * Minimum number of consecutive slow requests that can trigger RT circuit breaking.
      *
      * @since 1.7.0
@@ -88,6 +91,7 @@ public class DegradeRule extends AbstractRule {
     private int rtSlowRequestAmount = RuleConstant.DEGRADE_DEFAULT_SLOW_REQUEST_AMOUNT;
 
     /**
+     * 触发熔断的最小的请求数
      * Minimum number of requests (in an active statistic time span) that can trigger circuit breaking.
      *
      * @since 1.7.0
@@ -179,10 +183,13 @@ public class DegradeRule extends AbstractRule {
     // Internal implementation (will be deprecated and moved outside).
 
     private AtomicLong passCount = new AtomicLong(0);
+
+    // 是否发生降级
     private final AtomicBoolean cut = new AtomicBoolean(false);
 
     @Override
     public boolean passCheck(Context context, DefaultNode node, int acquireCount, Object... args) {
+        //如果当前正处于降级阶段，则直接返回false
         if (cut.get()) {
             return false;
         }
@@ -192,17 +199,23 @@ public class DegradeRule extends AbstractRule {
             return true;
         }
 
+        // 如果是根据请求响应时间RT进行判断
         if (grade == RuleConstant.DEGRADE_GRADE_RT) {
+            // 获取该节点的平均响应时间
             double rt = clusterNode.avgRt();
+            // 如果当前平均响应时间小于阈值，则可以通过，并重置passcount为0
             if (rt < this.count) {
                 passCount.set(0);
                 return true;
             }
 
+            // 执行到这里说明当前的平均响应时间大于阈值了，此时进入了准降级阶段，不会立即进入降级
+            // 如果该状态连续请求次数小于rtSlowRequestAmount，则放行
             // Sentinel will degrade the service only if count exceeds.
             if (passCount.incrementAndGet() < rtSlowRequestAmount) {
                 return true;
             }
+            // 如果根据异常比例进行判断
         } else if (grade == RuleConstant.DEGRADE_GRADE_EXCEPTION_RATIO) {
             double exception = clusterNode.exceptionQps();
             double success = clusterNode.successQps();
@@ -229,6 +242,8 @@ public class DegradeRule extends AbstractRule {
             }
         }
 
+        // 当触发熔断降级时，原子更新为true
+        // 并开启一个定时任务，在熔断时间过后，将熔断状态设置为false,并将通过计数重设为0
         if (cut.compareAndSet(false, true)) {
             ResetTask resetTask = new ResetTask(this);
             pool.schedule(resetTask, timeWindow, TimeUnit.SECONDS);
