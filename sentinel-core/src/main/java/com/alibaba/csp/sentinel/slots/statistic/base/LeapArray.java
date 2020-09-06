@@ -68,7 +68,7 @@ public abstract class LeapArray<T> {
         AssertUtil.isTrue(sampleCount > 0, "bucket count is invalid: " + sampleCount);
         AssertUtil.isTrue(intervalInMs > 0, "total time interval of the sliding window should be positive");
         AssertUtil.isTrue(intervalInMs % sampleCount == 0, "time span needs to be evenly divided");
-
+        // 1000 / 2 = 500ms
         this.windowLengthInMs = intervalInMs / sampleCount;
         this.intervalInMs = intervalInMs;
         this.intervalInSecond = intervalInMs / 1000.0;
