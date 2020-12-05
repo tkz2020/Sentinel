@@ -43,6 +43,7 @@ import com.alibaba.csp.sentinel.context.Context;
  * {@link Context#setCurEntry(Entry)} as parent entry of this.
  * </p>
  *
+ * Entry代表一个当前调用的一个标志
  * @author qinan.qn
  * @author jialiang.linjl
  * @author leyou(lihao)

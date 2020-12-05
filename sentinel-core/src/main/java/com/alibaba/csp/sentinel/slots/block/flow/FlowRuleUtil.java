@@ -227,6 +227,7 @@ public final class FlowRuleUtil {
         }
     }
 
+    //顶一个一个Function,获取FlowRule里的resource
     private static final Function<FlowRule, String> extractResource = new Function<FlowRule, String>() {
         @Override
         public String apply(FlowRule rule) {
