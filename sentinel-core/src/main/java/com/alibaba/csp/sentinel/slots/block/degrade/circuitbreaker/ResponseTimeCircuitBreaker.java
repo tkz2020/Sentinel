@@ -82,31 +82,41 @@ public class ResponseTimeCircuitBreaker extends AbstractCircuitBreaker {
     }
 
     private void handleStateChangeWhenThresholdExceeded(long rt) {
+        //如果熔断器开启，拦截所有请求
         if (currentState.get() == State.OPEN) {
             return;
         }
         
         if (currentState.get() == State.HALF_OPEN) {
+            //如果是半开启状态，根据接下来的一个请求判断
             // In detecting request
             // TODO: improve logic for half-open recovery
             if (rt > maxAllowedRt) {
+                //请求RT大于设置的阈值，熔断状态由半开启转为开启状态
                 fromHalfOpenToOpen(1.0d);
             } else {
+                //请求RT小于设置的阈值，熔断状态由半开启转为关闭状态
                 fromHalfOpenToClose();
             }
             return;
         }
 
+        //下面熔断器状态为关闭状态
         List<SlowRequestCounter> counters = slidingCounter.values();
         long slowCount = 0;
         long totalCount = 0;
         for (SlowRequestCounter counter : counters) {
+            //统计慢调用数量和总调用数量
             slowCount += counter.slowCount.sum();
             totalCount += counter.totalCount.sum();
         }
+
+        //总调用数量小于最小请求阈值，不做熔断。
         if (totalCount < minRequestAmount) {
             return;
         }
+
+        //慢调用比例大于阈值，熔断状态由关闭变为开启状态
         double currentRatio = slowCount * 1.0d / totalCount;
         if (currentRatio > maxSlowRequestRatio) {
             transformToOpen(currentRatio);

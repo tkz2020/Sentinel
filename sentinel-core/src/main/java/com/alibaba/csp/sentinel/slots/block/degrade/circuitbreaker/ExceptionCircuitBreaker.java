@@ -30,6 +30,7 @@ import static com.alibaba.csp.sentinel.slots.block.RuleConstant.DEGRADE_GRADE_EX
 import static com.alibaba.csp.sentinel.slots.block.RuleConstant.DEGRADE_GRADE_EXCEPTION_COUNT;
 
 /**
+ * ExceptionCircuitBreaker负责异常数/异常比例的熔断，通过滑动窗口统计发生错误数及请求总数。
  * @author Eric Zhao
  * @since 1.8.0
  */
@@ -79,35 +80,45 @@ public class ExceptionCircuitBreaker extends AbstractCircuitBreaker {
     }
 
     private void handleStateChangeWhenThresholdExceeded(Throwable error) {
+        //如果熔断器开启，发送错误继续熔断。
         if (currentState.get() == State.OPEN) {
             return;
         }
         
         if (currentState.get() == State.HALF_OPEN) {
             // In detecting request
+            //如果没有错误，熔断器状态由半开启状态转为关闭，允许所有请求通过。
             if (error == null) {
                 fromHalfOpenToClose();
             } else {
+                //请求还是发送错误，熔断器状态由半开启转为开启，熔断所有请求。
                 fromHalfOpenToOpen(1.0d);
             }
             return;
         }
-        
+
+        //下面是熔断器关闭状态
         List<SimpleErrorCounter> counters = stat.values();
         long errCount = 0;
         long totalCount = 0;
         for (SimpleErrorCounter counter : counters) {
+            //计算错误请求数量以及错误请求总数。
             errCount += counter.errorCount.sum();
             totalCount += counter.totalCount.sum();
         }
+
+        //最小请求数内不发生熔断
         if (totalCount < minRequestAmount) {
             return;
         }
         double curCount = errCount;
         if (strategy == DEGRADE_GRADE_EXCEPTION_RATIO) {
             // Use errorRatio
+            //计算错误请求比例
             curCount = errCount * 1.0d / totalCount;
         }
+
+        //异常数/或者异常比例与阈值比较，如果超过阈值，熔断器由关闭转换为开启。
         if (curCount > threshold) {
             transformToOpen(curCount);
         }

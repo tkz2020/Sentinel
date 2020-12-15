@@ -68,12 +68,15 @@ public abstract class AbstractCircuitBreaker implements CircuitBreaker {
     public boolean tryPass(Context context) {
         // Template implementation.
         if (currentState.get() == State.CLOSED) {
+            //如果熔断器状态为关闭，则返回true，即允许请求通过。
             return true;
         }
         if (currentState.get() == State.OPEN) {
             // For half-open state we allow a request for probing.
+            // 如果断路器状态为开启状态，并且已经超过熔断时长以及开启状态成功转换为半开启（探测）状态，则返回true,即允许请求通过。
             return retryTimeoutArrived() && fromOpenToHalfOpen(context);
         }
+        //如果熔断器状态为开启，并且还在熔断时长内，则返回false，禁止请求通过。
         return false;
     }
 

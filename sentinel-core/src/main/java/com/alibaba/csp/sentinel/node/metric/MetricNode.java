@@ -20,6 +20,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
+ * 在给定时间戳一个指定资源的指标数据
  * Metrics data for a specific resource at given {@code timestamp}.
  *
  * @author jialiang.linjl
@@ -29,6 +30,7 @@ public class MetricNode {
 
     private String resource;
     /**
+     * 资源分类
      * Resource classification (e.g. SQL or RPC)
      * @since 1.7.0
      */
